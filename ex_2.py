@@ -88,10 +88,6 @@ def exercise_boundary(full_tree, call_or_put,h):
 #exercise_boundary(full_tree, call_or_put,h)
 
 
-
-
-
-
 #B
 def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
     sims = []
@@ -326,7 +322,8 @@ first = []
 if __name__ == "__main__":
 
     #2c
-    task_2c = False
+    task_2c = 0
+    
     if task_2c:
         call_or_put=1
         print(american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
@@ -340,7 +337,7 @@ if __name__ == "__main__":
     #print(stock_tree)
 
 
-    if(call_or_put==1):
+    if(call_or_put == 1):
         print("call")
     else:
         print("put")

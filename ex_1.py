@@ -18,46 +18,30 @@ def black_scholes_model(S,K,T,r,delta,sigma,call_or_put):
 
     return c_or_p
     
-    
-S = 110 #Current stock price
-K = 100 #Option exercise price
-T = 5 #Time to maturity (in years)
-r = 0.05 #Annual interest rate
-delta = 0.02 #Annual (continuous) dividend yield
-sigma = .3 #Annualized volatility of stock
-call_or_put = -1 # 1 = call, -1 = put
-
-
-print("Black Scholes")
-print(black_scholes_model(S,K,T,r,delta,sigma,call_or_put))
-
-
-
-
-
 
 #B, mulig forskjell fra metoden over Sufficent number of steps
 
 def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
 
-def european_bionomial_option(S,K,T,r,delta,sigma,call_or_put):
+def european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put):
 
     #handle probability cases    
-    h = 1
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
     u = math.e**((r-delta)*h+sigma*h**(1/2))
     p = (math.e**((r-delta)*h)-d)/(u-d)
-    possibilites = ["uuuuu","uuuud","uuudd","uuddd","udddd","ddddd"]
+    possibilites = []
+    for us in range(int(T/h),0,-1):
+        possibilites.append(us)  #["uuuuu","uuuud","uuudd","uuddd","udddd","ddddd"]
 
     prices = []
     
     for end_node in possibilites: 
-        us = end_node.count("u")
-        price = S*u**(us)*d**(len(possibilites)-1-us)
+        us = end_node
+        price = S*u**(us)*d**(len(possibilites)-us)
         value = call_or_put*(price - K)
         if value > 0:
-            probabilty = nCr(len(possibilites)-1,5-us) * p**us * (1-p)**(len(possibilites)-1-us)
+            probabilty = nCr(len(possibilites),us) * p**us * (1-p)**(len(possibilites)-us)
             prices.append(value*probabilty)
     option_price = sum(prices)*math.e**(-(r)*T)
     return option_price
@@ -65,17 +49,8 @@ def european_bionomial_option(S,K,T,r,delta,sigma,call_or_put):
 
 
 
-
-print(f"\n European Binomial option")
-print(european_bionomial_option(S,K,T,r,delta,sigma,call_or_put))
-
-
-
-
-
-
 #C GREEKS
-print("\n GREEKS")
+
 
 def DELTA(s_primes,K,delta,sigma,r,T):
     deltas = []
@@ -83,12 +58,7 @@ def DELTA(s_primes,K,delta,sigma,r,T):
         DELTA = math.e**(-delta*T)*norm.cdf((math.log(s/K)+(r-delta+(sigma**2)/2)*T) / (sigma*T**(1/2)))
         deltas.append(DELTA)
     return deltas
-s_primes = [x for x in range(1,401)]
-deltas = DELTA(s_primes,K,delta,sigma,r,T)
 
-plt.plot(s_primes,deltas)
-plt.title("Delta")
-#plt.show()
 
 
 
@@ -99,18 +69,14 @@ def GAMMA(deltas):
         gammas.append( (deltas[i+1]-deltas[i]) )
     return gammas
 
-plt.plot(s_primes[1::],GAMMA(deltas))
-plt.title("Gamma")
-#plt.show()
+
 
 def VEGA(s_primes):
     vegas = []
     for s in s_primes:
         vegas.append( black_scholes_model(s,K,T,r,delta,sigma+0.01,call_or_put) - black_scholes_model(s,K,T,r,delta,sigma,call_or_put))
     return vegas
-plt.plot(s_primes,VEGA(s_primes))
-plt.title("Vega")
-#plt.show()
+
 
 def THETA(s_primes):
     theta = []
@@ -119,9 +85,7 @@ def THETA(s_primes):
 
     return theta
 
-plt.plot(s_primes,THETA(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
-plt.title("Theta")
-#plt.show()
+
 
 def RHO(s_primes):
     rho = []
@@ -130,9 +94,7 @@ def RHO(s_primes):
 
     return rho
 
-plt.plot(s_primes,RHO(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
-plt.title("Rho")
-#plt.show()
+
 
 def PSI(s_prime):
     psi = []
@@ -141,6 +103,71 @@ def PSI(s_prime):
 
     return psi
 
-plt.plot(s_primes,PSI(s_primes))
-plt.title("Psi")
-#plt.show()
+
+
+
+if __name__ == "__main__":
+    #Parameters
+    S = 110 #Current stock price
+    K = 100 #Option exercise price
+    T = 5 #Time to maturity (in years)
+    r = 0.05 #Annual interest rate
+    delta = 0.02 #Annual (continuous) dividend yield
+    sigma = .3 #Annualized volatility of stock
+    call_or_put = 1 # 1 = call, -1 = put
+    h = 1
+    
+    #––––Run toggles––––
+    one_a = 1
+    one_b = 1 
+    one_c = 0 
+    #plots for 1C)
+    DELTA_plot = 0
+    GAMMA_plot = 0
+    VEGA_plot = 0
+    THETA_plot = 0
+    RHO_plot = 0
+    PSI_plot = 0
+    #––––––––––––––––
+    if one_a:
+        print("Black Scholes")
+        print(black_scholes_model(S,K,T,r,delta,sigma,call_or_put))
+    
+    if one_b:
+        print(f"\n European Binomial option")
+        print(european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put))
+
+    if one_c:
+        #print("\n GREEKS")
+        deltas = DELTA(s_primes,K,delta,sigma,r,T)
+        s_primes = [x for x in range(1,401)]
+
+        plt.plot(s_primes,deltas)
+        plt.title("Delta")
+        if DELTA_plot:
+            plt.show()
+        
+        plt.plot(s_primes[1::],GAMMA(deltas))
+        plt.title("Gamma")
+        if GAMMA_plot: 
+            plt.show()
+        
+        plt.plot(s_primes,VEGA(s_primes))
+        plt.title("Vega")
+        if VEGA_plot:
+            plt.show()
+        
+        plt.plot(s_primes,THETA(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+        plt.title("Theta")
+        if THETA_plot:
+            plt.show()
+        
+        plt.plot(s_primes,RHO(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+        plt.title("Rho")
+        if RHO_plot:
+            plt.show()
+        
+        plt.plot(s_primes,PSI(s_primes))
+        plt.title("Psi")
+        if PSI_plot:
+            plt.show()

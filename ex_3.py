@@ -18,29 +18,31 @@ def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
 
 
-def european_knock_in_option(S,K,T,r,delta,sigma,call_or_put,H):
+def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H):
     
     #handle probability cases    
-    h = 1
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
     u = math.e**((r-delta)*h+sigma*h**(1/2))
     p = (math.e**((r-delta)*h)-d)/(u-d)
-    possibilites = ["uuuuu","uuuud","uuudd","uuddd","udddd","ddddd"]
+    
+    possibilites = []
+    for us in range(int(T/h),0,-1):
+        possibilites.append(us)  #["uuuuu","uuuud","uuudd","uuddd","udddd","ddddd"]
 
     prices = []
-    
     for end_node in possibilites: 
-        us = end_node.count("u")
-        price = S*u**(us)*d**(len(possibilites)-1-us)
+        us = end_node
+        price = S*u**(us)*d**(len(possibilites)-us)
         value = call_or_put*(price - K)
+        
         if price < H: 
-            
             #Multiply by the chance of having passed H on the path, since the new valuation is E(pay|S): P*max(S-K,0) (1-P)*0 
-            value = value*probability_of_having_passed(len(possibilites[0]),S,sigma,price,H)
+            value = value*probability_of_having_passed(int(T/h),S,sigma,price,H)
 
         if value > 0:
-            probabilty = nCr(len(possibilites)-1,5-us) * p**us * (1-p)**(len(possibilites)-1-us)
+            probabilty = nCr(len(possibilites),us) * p**us * (1-p)**(len(possibilites)-us)
             prices.append(value*probabilty)
+
     option_price = sum(prices)*math.e**(-(r)*T)
     return option_price
 
@@ -133,7 +135,8 @@ def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,di
 if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
-    three_b = 0 
+    three_a = 0
+    three_b = 1 
     three_b_var = 0 
     three_c = 0
     #––––––––––––––––
@@ -142,7 +145,7 @@ if __name__ == "__main__":
     S = 110 #Current stock price
     K = 100 #Option exercise price
     T = 5 #Time to maturity (in years)
-    h = 1 #stepsize in years
+    h = 0.05 #stepsize in years
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
@@ -153,11 +156,13 @@ if __name__ == "__main__":
 
 
     #3a test
-    print(european_knock_in_option(S,K,T,r,delta,sigma,call_or_put,H))
-
+    if three_a: 
+        print(f"European knock in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H)}")
+       
 
     #3b test
     if three_b:
+        h = 1 #NB running this for low h takes to long
         meta_simulations = 1000  
         
         
