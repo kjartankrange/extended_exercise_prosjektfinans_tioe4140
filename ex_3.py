@@ -2,6 +2,10 @@ import math
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
+from math import e
+from scipy.stats import norm
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 
@@ -130,22 +134,182 @@ def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,di
 
     return save_and_return(dictionary,max( call_or_put*(S-K)*probability_of_having_passed(t,110,sigma,S,H), math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,dictionary)*p+math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,dictionary)*(1-p) ),t,pos_y)
 
+def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
+    sims = []
+    for i in range(rounds): 
+        sim = []
+        t = 0
+        s_t = S
+        while t <= T:
+            alpha = 0.05
+            sim.append(s_t)
+            s_t = s_t*e**((alpha-delta - (sigma**(2))/2)*h + sigma*h**(1/2)*random.normal(0,1) )
+            
+            t += h
+        sims.append(sim)
+    return sims
+
+def price_options(T,K,h,call_or_put):
+    # stock sims = [[13,13.8,14,15,16],[12,13,15,14,10],...]
+    # cash_flows = [[13,13.8,14,15,16],[12,13,15,14,10],...]
+    rounds = 100000
+    stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,rounds)
+
+    cash_flows = []
+    stop_flag = []
+    extra=int(1/h)
+    
+    for i in range(len(stock_sims)):
+        stop_flag.append([0]*T*extra)
+        cash_flows.append([0]*T*extra)
+ 
+    #unique case at t==T
+    
+    for i in range(len(stock_sims)):
+        stock_sims[i] = stock_sims[i][1:]
+    
+
+    #print(cash_flows[4])
+
+    #knock-in
+    knock_in = []
+    H = 160
+    
+    #price american knock-in and knock out
+
+    if call_or_put==1:
+        for i in range(len(stock_sims)):
+            knock_in.append([0]*T*extra)
+            flag = 0
+            for t in range(len(stock_sims[i])):
+                if stock_sims[i][t]>=H:
+                    flag = 1
+                knock_in[i][t]=flag
+    else:
+        for i in range(len(stock_sims)):
+            knock_in.append([1]*T*extra)
+            flag = 1
+            for t in range(len(stock_sims[i])):
+                if stock_sims[i][t]>=H:
+                    flag = 0
+                knock_in[i][t]=flag
+
+    for i in range(len(stock_sims)):
+        if sum(knock_in[i])>=1:
+            cash_flows[i][-1]=max(call_or_put*(stock_sims[i][-1] - K), 0)
+            if call_or_put*(stock_sims[i][-1] - K)> 0:
+                stop_flag[i][-1] = 1
+
+    for t in range(T*extra-1,0,-1):
+
+        regression_table_t = []
+        
+
+        for i in range(len(stock_sims)):
+            #get the last values
+            #print(len(cash_flows[t+1]))
+            
+            #if the option is in the money
+
+            if call_or_put*(stock_sims[i][t-1] - K) > 0:
+
+                if cash_flows[i][t]!=0:
+
+                    regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
+        
+        #print(regression_table_t)
+        if regression_table_t!=[]:
+            c, c_x = get_regression(regression_table_t)
+        #print(c)
+        #print(c_x)
+        count_ex = 0
+        count_co = 0
+        for i in range(len(stock_sims)):
+            continuation_value = c+c_x*stock_sims[i][t-1]
+            exercise_value = max(call_or_put*(stock_sims[i][t-1] - K),0)
+            #print(f"{t}")
+            #print(continuation_value)
+            #print(exercise_value)
+            #print("---")
+            if exercise_value > continuation_value:
+                if exercise_value!=0 and knock_in[i][t]==1:
+                    for x in range(len(stop_flag[i])):
+                        stop_flag[i][x]=0
+                        cash_flows[i][x]=0
+                    stop_flag[i][t-1]=1
+                    cash_flows[i][t-1]=exercise_value
+                    count_ex += 1
+            else:
+                count_co += 1
+                cash_flows[i][t-1]=0
+        #print(f"count ex: {count_ex}")
+        #print(f"count co: {count_co}")
+
+    #return average
+    summ = 0
+    for i in range(len(stock_sims)):
+        #print(cash_flows[i])
+        for t in range(0,T*extra):
+            if stop_flag[i][t] == 1:
+                summ += cash_flows[i][t]*e**((-r)*(t*h+h))
+    #print(stop_flag)
+    
+    #for E
+    plot_hist_MC(stop_flag)
+    
+    return summ / len(stock_sims)
+    
+def get_regression(regression_table):
+    x = []
+    y = []
+    #print(len(regression_table))
+    for tup in regression_table: 
+        x.append(tup[1])
+        #print(tup[0])
+        y.append(tup[0])
+    
+    plt.figure(1)
+    plt.scatter(x, y)
+    
+    x = np.array(x).reshape((-1,1)) 
+    y = np.array(y)
+    #print(x)
+    #print(y)
+
+    model = LinearRegression().fit(x,y)
+    #print(model.coef_)
+    #print(model.intercept_)
+    #print(model.intercept_, model.coef_[0])
+    plt.plot(x, model.intercept_+ x*model.coef_[0], "r")
+    #plt.show()
+    return model.intercept_, model.coef_[0]
+
+def plot_hist_MC(table):
+    x = []
+    for lst in table:
+        #print(lst)
+        for t in range(len(lst)):
+            if (lst[t]==1):
+                x.append(t*h+h)
+    plt.figure(2)
+    plt.hist(x, bins = [0.5,1.5,2.5,3.5,4.5,5.5]) #[0.5,1.5,2.5,3.5,4.5,5.5]
+    plt.show()
 
 
 if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
     three_a = 0
-    three_b = 1 
+    three_b = 0 
     three_b_var = 0 
-    three_c = 0
+    three_c = 1
     #––––––––––––––––
 
     #Params for simulations
     S = 110 #Current stock price
     K = 100 #Option exercise price
     T = 5 #Time to maturity (in years)
-    h = 0.05 #stepsize in years
+    h = 1 #stepsize in years
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
@@ -181,8 +345,20 @@ if __name__ == "__main__":
     
     #3c test
     if three_c:
+        delta = 0
         tree = {}
         print(american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,call_or_put,0,tree))
         print(tree)
+        if(call_or_put==1):
+            print("call")
+        else:
+            print("put")
+        print("MCTS",price_options(T,K,h,call_or_put))
+        call_or_put = -1
+        if(call_or_put==1):
+            print("call")
+        else:
+            print("put")
+        print("MCTS",price_options(T,K,h,call_or_put))
     
 
