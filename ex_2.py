@@ -1,22 +1,12 @@
 from math import e
-
 from scipy.stats import norm
 from numpy import random
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-S = 110 #Current stock price
-K = 100 #Option exercise price
-T = 5 #Time to maturity (in years)
-r = 0.05 #Annual interest rate
-delta = 0.02 #Annual (continuous) dividend yield
-sigma = .3 #Annualized volatility of stock
-call_or_put = -1 # 1 = call, -1 = put
-h = 1/4 #step size in years
 
-
-
+#2a
 def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
 
@@ -26,10 +16,9 @@ def save_and_return(S, data,value,t,pos_y):
     stock_tree[(t, pos_y)] = S
     return value
 
-#A
 full_tree = {}
 
-#fill ful
+#fill full tree
 def american_bionomial_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y):
    
     if t == 5: 
@@ -47,6 +36,122 @@ def american_bionomial_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y):
 
 
 
+
+#2b
+def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
+    sims = []
+    for i in range(rounds): 
+        sim = []
+        t = 0
+        s_t = S
+        while t <= T:
+            alpha = 0.05
+            sim.append(s_t)
+            s_t = s_t*e**((alpha-delta - (sigma**(2))/2)*h + sigma*h**(1/2)*random.normal(0,1) )
+            
+            t += h
+        sims.append(sim)
+    return sims
+
+
+def sims_plotter(sims,T):
+    ts = [i for i in range(T+1)]
+    for sim in sims:
+
+        plt.plot(ts,sim)
+    plt.show()
+
+
+def price_options(T,K,h,call_or_put, stock_sims_in):
+    # stock sims = [[13,13.8,14,15,16],[12,13,15,14,10],...]
+    # cash_flows = [[13,13.8,14,15,16],[12,13,15,14,10],...]
+
+    cash_flows = []
+    stop_flag = []
+    extra=int(1/h)
+    
+    for i in range(len(stock_sims_in)):
+        stop_flag.append([0]*T*extra)
+        cash_flows.append([0]*T*extra)
+ 
+    #unique case at t==T
+    
+    for i in range(len(stock_sims_in)):
+        stock_sims[i] = stock_sims_in[i][1:]
+    
+   
+    for i in range(len(stock_sims)):
+        cash_flows[i][-1]=max(call_or_put*(stock_sims[i][-1] - K), 0)
+        if call_or_put*(stock_sims[i][-1] - K)> 0:
+            stop_flag[i][-1] = 1
+    
+
+    for t in range(T*extra-1,0,-1):
+        regression_table_t = []
+        
+
+        for i in range(len(stock_sims)):
+            #get the last values
+            
+            #if the option is in the money
+
+            if call_or_put*(stock_sims[i][t-1] - K) > 0:
+
+                if cash_flows[i][t]!=0:
+
+                    regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
+        
+        if regression_table_t!=[]:
+            c, c_x = get_regression(regression_table_t)
+
+        for i in range(len(stock_sims)):
+            continuation_value = c+c_x*stock_sims[i][t-1]
+            exercise_value = max(call_or_put*(stock_sims[i][t-1] - K),0)
+
+            if exercise_value > continuation_value:
+                if exercise_value!=0:
+                    for x in range(T*extra):
+                        stop_flag[i][x]=0
+                        cash_flows[i][x]=0
+                    stop_flag[i][t-1]=1
+                    cash_flows[i][t-1]=exercise_value
+            else:
+                cash_flows[i][t-1]=0
+
+
+    #return average
+    summ = 0
+    for i in range(len(stock_sims)):
+        for t in range(0,T*extra):
+            if stop_flag[i][t] == 1:
+                summ += cash_flows[i][t]*e**((-r)*(t*h+h))
+
+    #for F
+    if task_2f:
+        plot_hist_MC(stop_flag)
+    
+    return summ / len(stock_sims)
+    
+def get_regression(regression_table):
+    x = []
+    y = []
+    for tup in regression_table: 
+        x.append(tup[1])
+        y.append(tup[0])
+    
+    #plt.figure(1)
+    #plt.scatter(x, y)
+    
+    x = np.array(x).reshape((-1,1)) 
+    y = np.array(y)
+
+    model = LinearRegression().fit(x,y)
+
+    #plt.plot(x, model.intercept_+ x*model.coef_[0], "r")
+    #plt.show()
+    return model.intercept_, model.coef_[0]
+    
+#2c
 
 def exercise_boundary(full_tree, call_or_put,h):
     stock_price = []
@@ -68,170 +173,20 @@ def exercise_boundary(full_tree, call_or_put,h):
                     time.append(x_pos*h)
                     boundary = S
             y_pos+=2
-    plt.figure(1)
-    plt.scatter(time, stock_price, marker="|")
-    plt.plot(time, stock_price)
-    plt.xlim(0,T)
-    if call_or_put==1:
-        plt.ylim(100,500)
-    else:
-        plt.ylim(20,100)
-    plt.show()
+    if task_2c:
+        plt.figure(1)
+        plt.scatter(time, stock_price, marker="|")
+        plt.plot(time, stock_price)
+        plt.xlim(0,T)
+        if call_or_put==1:
+            plt.ylim(100,500)
+        else:
+            plt.ylim(20,100)
+        plt.show()
     return time, stock_price
 
-#print(american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
 
-#print(full_tree)
-
-#print(stock_tree)
-
-#exercise_boundary(full_tree, call_or_put,h)
-
-
-#B
-def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
-    sims = []
-    for i in range(rounds): 
-        sim = []
-        t = 0
-        s_t = S
-        while t <= T:
-            alpha = 0.05
-            sim.append(s_t)
-            s_t = s_t*e**((alpha-delta - (sigma**(2))/2)*h + sigma*h**(1/2)*random.normal(0,1) )
-            
-            t += h
-        sims.append(sim)
-    return sims
-
-rounds = 10000
-stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,rounds)
-
-def sims_plotter(sims,T):
-    ts = [i for i in range(T+1)]
-    for sim in sims:
-
-        plt.plot(ts,sim)
-    plt.show()
-
-
-def price_options(T,K,h,call_or_put):
-    # stock sims = [[13,13.8,14,15,16],[12,13,15,14,10],...]
-    # cash_flows = [[13,13.8,14,15,16],[12,13,15,14,10],...]
-
-    cash_flows = []
-    stop_flag = []
-    extra=int(1/h)
-    
-    for i in range(len(stock_sims)):
-        stop_flag.append([0]*T*extra)
-        cash_flows.append([0]*T*extra)
- 
-    #unique case at t==T
-    
-    for i in range(len(stock_sims)):
-        stock_sims[i] = stock_sims[i][1:]
-    
-   
-    for i in range(len(stock_sims)):
-        cash_flows[i][-1]=max(call_or_put*(stock_sims[i][-1] - K), 0)
-        if call_or_put*(stock_sims[i][-1] - K)> 0:
-            stop_flag[i][-1] = 1
-    
-    #print(cash_flows[4])
-
-    for t in range(T*extra-1,0,-1):
-        #print(t)
-        regression_table_t = []
-        
-
-        for i in range(len(stock_sims)):
-            #get the last values
-            #print(len(cash_flows[t+1]))
-            
-            #if the option is in the money
-
-            if call_or_put*(stock_sims[i][t-1] - K) > 0:
-
-                if cash_flows[i][t]!=0:
-
-                    regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
-        
-        #print(regression_table_t)
-        if regression_table_t!=[]:
-            c, c_x = get_regression(regression_table_t)
-        #print(c)
-        #print(c_x)
-        count_ex = 0
-        count_co = 0
-        for i in range(len(stock_sims)):
-            continuation_value = c+c_x*stock_sims[i][t-1]
-            exercise_value = max(call_or_put*(stock_sims[i][t-1] - K),0)
-            #print(f"{t}")
-            #print(continuation_value)
-            #print(exercise_value)
-            #print("---")
-            if exercise_value > continuation_value:
-                if exercise_value!=0:
-                    for x in range(T*extra):
-                        stop_flag[i][x]=0
-                        cash_flows[i][x]=0
-                    stop_flag[i][t-1]=1
-                    cash_flows[i][t-1]=exercise_value
-                    count_ex += 1
-            else:
-                count_co += 1
-                cash_flows[i][t-1]=0
-        #print(f"count ex: {count_ex}")
-        #print(f"count co: {count_co}")
-
-    #return average
-    summ = 0
-    for i in range(len(stock_sims)):
-        #print(cash_flows[i])
-        for t in range(0,T*extra):
-            if stop_flag[i][t] == 1:
-                summ += cash_flows[i][t]*e**((-r)*(t*h+h))
-    #print(stop_flag)
-    
-    #for E
-    plot_hist_MC(stop_flag)
-    
-    return summ / len(stock_sims)
-    
-def get_regression(regression_table):
-    x = []
-    y = []
-    #print(len(regression_table))
-    for tup in regression_table: 
-        x.append(tup[1])
-        #print(tup[0])
-        y.append(tup[0])
-    
-    plt.figure(1)
-    plt.scatter(x, y)
-    
-    x = np.array(x).reshape((-1,1)) 
-    y = np.array(y)
-    #print(x)
-    #print(y)
-
-    model = LinearRegression().fit(x,y)
-    #print(model.coef_)
-    #print(model.intercept_)
-    #print(model.intercept_, model.coef_[0])
-    plt.plot(x, model.intercept_+ x*model.coef_[0], "r")
-    #plt.show()
-    return model.intercept_, model.coef_[0]
-    
-
-#C
-def exercise_bounderies(full_tree,call_or_put):
-    h_1 = 1/2
-    
-    pass 
-
-#E
+#2e
 
 def make_granular_function(excersice_boundaries,h,times):
     y_data = []*T*int(1/h)
@@ -241,14 +196,8 @@ def make_granular_function(excersice_boundaries,h,times):
     for i in range(len(excersice_boundaries)-1):
         growth = (excersice_boundaries[i+1]-excersice_boundaries[i]) / ( (times[i+1]-times[i])/h)
         growth_lst.append(growth)
-    #print(growth_lst)
     
-     
-    growth_extenscive = []
-    
-    #for i in range(len(growth_lst)-1):
-    #   growth_lst[i] = growth_lst[i]/( (times[i+1]-times[i])/h )
-    
+    growth_extenscive = []    
 
     t = 0
     while t <  T:
@@ -270,11 +219,6 @@ def make_granular_function(excersice_boundaries,h,times):
     return granular_exercise_lst
 
 
-
-print(american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
-time, ex_bounderies = exercise_boundary(full_tree, call_or_put,h)
-
-
 def ex_times(stock_sims, time, ex_bounderies):
     gran_ex_list = make_granular_function(ex_bounderies,h, time)
     ex_times = []
@@ -288,13 +232,18 @@ def ex_times(stock_sims, time, ex_bounderies):
                 if sim[i] <= gran_ex_list[i]:
                     ex_times.append(i*h)
                     break
+    #percentage before T
+    sum_total = 0
+    sum_before_T = 0
+    for time in ex_times:
+        if time<T:
+            sum_before_T+=1
+        sum_total+=1
+    print(f"Percentage of paths excercised before T = {T}: ",sum_before_T/sum_total*100)
 
     plt.figure(3)
-    plt.hist(ex_times, bins = 5) #[0.5,1.5,2.5,3.5,4.5,5.5]
+    plt.hist(ex_times, bins = T*int(1/h)) #[0.5,1.5,2.5,3.5,4.5,5.5]
     plt.show()
-
-stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,10000)
-ex_times(stock_sims, time, ex_bounderies)
 
 
 #F
@@ -305,52 +254,76 @@ def plot_hist_MC(table):
             if (lst[t]==1):
                 x.append(t*h+h)
     plt.figure(2)
-    plt.hist(x, bins = [0.5,1.5,2.5,3.5,4.5,5.5]) #[0.5,1.5,2.5,3.5,4.5,5.5]
+    plt.hist(x, bins = T*int(1/h)) #[0.5,1.5,2.5,3.5,4.5,5.5]
     plt.show()
 
-last = []
-first = []
 
-#for stock_sim in stock_sims:
-#    last.append(stock_sim[-1])
-#    first.append(stock_sim[1])
-
-#plt.hist(last,bins=100)
-#plt.show()
-#sims_plotter(stock_sims,T)
 
 if __name__ == "__main__":
+    #What simulations to run 
+    #––––Run toggles––––
+    task_2a = 0
+    task_2b = 0
+    task_2c = 0
+    task_2d = 0
+    task_2e = 0
+    task_2f = 0
+    #––––––––––––––––
+
+    #Params for simulations
+    S = 110 #Current stock price
+    K = 100 #Option exercise price
+    T = 5 #Time to maturity (in years)
+    h = 1/2 #stepsize in years
+    r = 0.05 #Annual interest rate
+    delta = 0.02 #Annual (continuous) dividend yield
+    sigma = .3 #Annualized volatility of stock
+    call_or_put = 1 # 1 = call, -1 = put
+    number_of_simulations = 10000               
+
+    #2a
+
+    if task_2a:
+        call_or_put = 1
+        print("American call option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+        call_or_put = -1
+        print("American put option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+
+    #2b
+    if task_2b:
+        call_or_put = 1
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+        print("American call option (MC): ",price_options(T,K,h,call_or_put, stock_sims))
+        call_or_put = -1
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+        print("American put option (MC): ",price_options(T,K,h,call_or_put, stock_sims))
 
     #2c
-    task_2c = 0
-    
+    #TODO: do we need to use the hint here? Add more st devs?
     if task_2c:
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
         call_or_put=1
-        print(american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+        z = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
         x,y= exercise_boundary(full_tree, call_or_put,h)
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
         call_or_put=-1
-        print(american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+        z = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
         x,y=exercise_boundary(full_tree, call_or_put,h)
 
-    #print(full_tree)
+    #2d - discussion
 
-    #print(stock_tree)
+    #2e and 2f need same price paths
+    if task_2e or task_2f:
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
 
-
-    if(call_or_put == 1):
-        print("call")
-    else:
-        print("put")
-    #print("MCTS",price_options(T,K,h,call_or_put))
-    #print("Tree",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
-    #print(full_tree)
-
-    call_or_put = -1
-    if(call_or_put==1):
-        print("call")
-    else:
-        print("put")
-    print("MCTS",price_options(T,K,h,call_or_put))
-    #print("Tree",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
-
-
+    #2e 
+    if task_2e:
+        call_or_put = -1
+        price = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
+        time, ex_bounderies = exercise_boundary(full_tree, call_or_put,h)
+        ex_times(stock_sims, time, ex_bounderies)
+    
+    #2f
+    if task_2f:
+        call_or_put = -1
+        price  = price_options(T,K,h,call_or_put, stock_sims)
