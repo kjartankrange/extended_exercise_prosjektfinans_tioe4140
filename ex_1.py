@@ -5,17 +5,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+def save_plot(plotter,name_of_figure):
+    plotter.savefig(f"figures/{name}.png")
 
 #A
 
 def black_scholes_model(S,K,T,r,delta,sigma,call_or_put):
-    
-
     d1 = (math.log(S/K)+(r-delta+(sigma**2)/2)*T) / (sigma*T**(1/2))
     d2 = d1-sigma*(T**(1/2))
-    
     c_or_p = call_or_put*(S*math.e**(-delta*T)*norm.cdf(call_or_put*d1)-K*math.e**(-r*T)*norm.cdf(call_or_put*d2))
-
     return c_or_p
     
 
@@ -46,8 +44,16 @@ def european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put):
     option_price = sum(prices)*math.e**(-(r)*T)
     return option_price
 
-
-
+#Function for showing how binomial price converges towards Black-Sholes with sufficient steps
+def plot_binomial_prices(max_number_of_steps,delta_steps):
+    at_steps = 5
+    x = []
+    y = []
+    while at_steps <= max_number_of_steps:
+        y.append(european_bionomial_option(S,K,T,r,delta,sigma,T/at_steps,call_or_put))
+        x.append(at_steps)
+        at_steps += delta_steps
+    return x,y
 
 #C GREEKS
 
@@ -118,8 +124,8 @@ if __name__ == "__main__":
     h = 1
     
     #––––Run toggles––––
-    one_a = 1
-    one_b = 1 
+    one_a = 0
+    one_b = 1
     one_c = 0 
     #plots for 1C)
     DELTA_plot = 0
@@ -136,7 +142,12 @@ if __name__ == "__main__":
     if one_b:
         print(f"\n European Binomial option")
         print(european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put))
-
+        x,y = plot_binomial_prices(1000,10)
+        plt.axhline(y=black_scholes_model(S,K,T,r,delta,sigma,call_or_put), color='r', linestyle='-')
+        plt.plot(x,y)
+        plt.xlabel("Number of steps")
+        plt.ylabel("Price USD")
+        plt.show()
     if one_c:
         #print("\n GREEKS")
         deltas = DELTA(s_primes,K,delta,sigma,r,T)
@@ -171,3 +182,5 @@ if __name__ == "__main__":
         plt.title("Psi")
         if PSI_plot:
             plt.show()
+
+
