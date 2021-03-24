@@ -57,7 +57,7 @@ def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H):
 
 #3b
 
-def european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulations):
+def european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulations,knock_in):
     #Monte Carlo with random distribution growt
     sims = []
     for i in range(number_of_simulations): 
@@ -76,11 +76,18 @@ def european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulatio
     exercise_values = []
 
     for sim in sims:
+        knocked_out = 0
         for price in sim: 
-            if price >= H:
+            if price >= H and knock_in:
                 #sim[-1] is S_T
                 exercise_values.append( max(call_or_put*(sim[-1] - K), 0) )
-                break                 
+                break 
+            if price >= H and not knock_in:
+                knocked_out = True
+                break
+        #This is a knock-out option and it hasn't been knocked out   
+        if not knocked_out and not knock_in:
+            exercise_values.append( max(call_or_put*(sim[-1] - K), 0) )
     
     
     #discount all cashflows
@@ -131,7 +138,9 @@ def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,di
     u = math.e**((r-delta)*h+sigma*h**(1/2))
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
     p = (math.e**((r-delta)*h)-d)/(u-d)
-
+    if K < S and S < H:
+           print(probability_of_having_passed(t+h,110,sigma,S*u,160)) #This prints larger than 1
+           return save_and_return(dictionary,max( call_or_put*(S-K), probability_of_having_passed(t+h,110,sigma,S*u,160)*math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,dictionary)*p+probability_of_having_passed(t+h,110,sigma,S*d,160)*math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,dictionary)*(1-p) ),t,pos_y)
     return save_and_return(dictionary,max( call_or_put*(S-K)*probability_of_having_passed(t,110,sigma,S,H), math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,dictionary)*p+math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,dictionary)*(1-p) ),t,pos_y)
 
 def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
@@ -300,9 +309,10 @@ if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
     three_a = 0
-    three_b = 0 
+    three_b = 1 
     three_b_var = 0 
-    three_c = 1
+    three_c = 0
+    three_c_mc = 0
     #––––––––––––––––
 
     #Params for simulations
@@ -315,25 +325,28 @@ if __name__ == "__main__":
     sigma = .3 #Annualized volatility of stock
     call_or_put = 1 # 1 = call, -1 = put
     H = S+50 #barrier which the option has to pass in value
-    number_of_simulations = 1000               
-
+    number_of_simulations = 5_000               
+    knock_in = 1 #1 for knock-in 0 for knock-out
 
 
     #3a test
     if three_a: 
-        print(f"European knock in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H)}")
+        print(f"European knock-in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H)}" )
        
 
     #3b test
     if three_b:
-        h = 1 #NB running this for low h takes to long
-        meta_simulations = 1000  
+        h = 0.01 #NB running this for low h takes to long
+        meta_simulations = 20  
         
         
-        data = []
-        for x in range(number_of_simulations):
-            data.append(european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulations))
-        print(f"European barrier Monte Carlo:  {np.mean(data)}")
+        data_in = []
+        data_out = []
+        for x in range(meta_simulations):
+            data_in.append(european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulations,1))
+            data_out.append(european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulations,0))
+        print(f"European knock-in Monte Carlo mean:  {np.mean(data_in)} variance: {np.var(data_in)}")
+        print(f"European knock-out Monte Carlo mean:  {np.mean(data_out)} variance: {np.var(data_out)}")
 
     if three_b_var:
         simulation_round_limit = 1000
@@ -345,20 +358,21 @@ if __name__ == "__main__":
     
     #3c test
     if three_c:
-        delta = 0
+        delta = 0.02
         tree = {}
         print(american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,call_or_put,0,tree))
         print(tree)
-        if(call_or_put==1):
-            print("call")
-        else:
-            print("put")
-        print("MCTS",price_options(T,K,h,call_or_put))
-        call_or_put = -1
-        if(call_or_put==1):
-            print("call")
-        else:
-            print("put")
-        print("MCTS",price_options(T,K,h,call_or_put))
+        if three_c_mc:
+            if(call_or_put==1):
+                print("call")
+            else:
+                print("put")
+            print("MCTS",price_options(T,K,h,call_or_put))
+            call_or_put = -1
+            if(call_or_put==1):
+                print("call")
+            else:
+                print("put")
+            print("MCTS",price_options(T,K,h,call_or_put))
     
 
