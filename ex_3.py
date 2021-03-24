@@ -11,12 +11,12 @@ from sklearn.linear_model import LinearRegression
 
 
 
-#3A
+#3A 
 
 def probability_of_having_passed(t,S,sigma, S_t, H):
     if t == 0:
         return 0 
-    return math.e**((-2/(t*sigma**2))*math.log(S/H)*math.log(S_t/H) )
+    return math.e**( (-2/(t*sigma**2))*math.log(S/H)*math.log(S_t/H) )
 
 def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
@@ -124,24 +124,25 @@ def save_and_return(data,value,t,pos_y):
  
 
 
-def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,dictionary):
-    if t == 5: 
+def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,knock_in,dictionary):
+    if t == T: 
         temp = max(call_or_put*(S-K),0)
-        if S < 160:
-            #print(probability_of_having_passed(t,110,sigma,S,160))
-            temp = temp * probability_of_having_passed(t,110,sigma,S,160)
-        
         dictionary[ (t,pos_y) ]  = temp
         return temp
-
+    
     #handle probability cases    
     u = math.e**((r-delta)*h+sigma*h**(1/2))
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
     p = (math.e**((r-delta)*h)-d)/(u-d)
-    if K < S and S < H:
-           print(probability_of_having_passed(t+h,110,sigma,S*u,160)) #This prints larger than 1
-           return save_and_return(dictionary,max( call_or_put*(S-K), probability_of_having_passed(t+h,110,sigma,S*u,160)*math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,dictionary)*p+probability_of_having_passed(t+h,110,sigma,S*d,160)*math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,dictionary)*(1-p) ),t,pos_y)
-    return save_and_return(dictionary,max( call_or_put*(S-K)*probability_of_having_passed(t,110,sigma,S,H), math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,dictionary)*p+math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,dictionary)*(1-p) ),t,pos_y)
+    if t == T-h and K < S and S < H: 
+           p_u = min(probability_of_having_passed(t+h,110,sigma,S*u,H),1) #print(f"Probability of having passed @upwards: {probability_of_having_passed(t+h,110,sigma,S*u,H)}")
+           p_d = min(probability_of_having_passed(t+h,110,sigma,S*d,H),1) #print(f"Probability of having passed @downwards {probability_of_having_passed(t+h,110,sigma,S*d,H)}") #This wrongly prints larger than 1
+           if not knock_in:
+               p_u = 1 - p_u
+               p_d = 1 - p_d
+           return save_and_return(dictionary,max( call_or_put*(S-K), p_u*math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,knock_in,dictionary)*p+p_d*math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,knock_in,dictionary)*(1-p) ),t,pos_y)
+    
+    return save_and_return(dictionary,max( call_or_put*(S-K), math.e**((-r)*h)*american_bionomial_barrier_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,knock_in,dictionary)*p+math.e**((-r)*h)*american_bionomial_barrier_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h,knock_in,dictionary)*(1-p) ),t,pos_y)
 
 def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
     sims = []
@@ -309,9 +310,9 @@ if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
     three_a = 0
-    three_b = 1 
+    three_b = 0 
     three_b_var = 0 
-    three_c = 0
+    three_c = 1
     three_c_mc = 0
     #––––––––––––––––
 
@@ -319,11 +320,11 @@ if __name__ == "__main__":
     S = 110 #Current stock price
     K = 100 #Option exercise price
     T = 5 #Time to maturity (in years)
-    h = 1 #stepsize in years
+    h = 1/4 #stepsize in years
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
-    call_or_put = 1 # 1 = call, -1 = put
+    call_or_put = -1 # 1 = call, -1 = put
     H = S+50 #barrier which the option has to pass in value
     number_of_simulations = 5_000               
     knock_in = 1 #1 for knock-in 0 for knock-out
@@ -360,19 +361,25 @@ if __name__ == "__main__":
     if three_c:
         delta = 0.02
         tree = {}
-        print(american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,call_or_put,0,tree))
-        print(tree)
+        knock_in = 1
+        print(f"American call knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}")
+        knock_in = 0
+        print(f"American call knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}")
+        knock_in = 1
+        print(f"American put knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}")
+        knock_in = 0
+        print(f"American put knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}")
         if three_c_mc:
             if(call_or_put==1):
                 print("call")
             else:
                 print("put")
-            print("MCTS",price_options(T,K,h,call_or_put))
+            print("MC",price_options(T,K,h,call_or_put))
             call_or_put = -1
             if(call_or_put==1):
                 print("call")
             else:
                 print("put")
-            print("MCTS",price_options(T,K,h,call_or_put))
+            print("MC",price_options(T,K,h,call_or_put))
     
 

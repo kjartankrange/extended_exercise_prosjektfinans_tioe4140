@@ -262,7 +262,7 @@ def plot_hist_MC(table):
 if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
-    task_2a = 0
+    task_2a = 1
     task_2b = 0
     task_2c = 0
     task_2d = 0
