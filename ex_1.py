@@ -125,15 +125,16 @@ if __name__ == "__main__":
     
     #––––Run toggles––––
     one_a = 0
-    one_b = 1
-    one_c = 0 
+    one_b = 0
+    one_c = 1
+    one_c_graphs = 0 
     #plots for 1C)
-    DELTA_plot = 0
-    GAMMA_plot = 0
-    VEGA_plot = 0
-    THETA_plot = 0
-    RHO_plot = 0
-    PSI_plot = 0
+    DELTA_plot = 1
+    GAMMA_plot = 1
+    VEGA_plot = 1
+    THETA_plot = 1
+    RHO_plot = 1
+    PSI_plot = 1
     #––––––––––––––––
     if one_a:
         print("Black Scholes")
@@ -148,39 +149,47 @@ if __name__ == "__main__":
         plt.xlabel("Number of steps")
         plt.ylabel("Price USD")
         plt.show()
-    if one_c:
+    if one_c: 
+        s_primes = [S]
+        if one_c_graphs:
+            s_primes = [x for x in range(1,401)]
         #print("\n GREEKS")
         deltas = DELTA(s_primes,K,delta,sigma,r,T)
-        s_primes = [x for x in range(1,401)]
-
-        plt.plot(s_primes,deltas)
-        plt.title("Delta")
-        if DELTA_plot:
-            plt.show()
-        
-        plt.plot(s_primes[1::],GAMMA(deltas))
-        plt.title("Gamma")
-        if GAMMA_plot: 
-            plt.show()
-        
-        plt.plot(s_primes,VEGA(s_primes))
-        plt.title("Vega")
-        if VEGA_plot:
-            plt.show()
-        
-        plt.plot(s_primes,THETA(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
-        plt.title("Theta")
-        if THETA_plot:
-            plt.show()
-        
-        plt.plot(s_primes,RHO(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
-        plt.title("Rho")
-        if RHO_plot:
-            plt.show()
-        
-        plt.plot(s_primes,PSI(s_primes))
-        plt.title("Psi")
-        if PSI_plot:
-            plt.show()
+        print(f"Delta {DELTA(s_primes,K,delta,sigma,r,T)[0]}")
+        print(f"Gamma {GAMMA(DELTA(s_primes,K,delta,sigma,r,T))}")
+        print(f"Vega {VEGA(s_primes)[0]}")
+        print(f"Theta {THETA(s_primes)[0]}")
+        print(f"Rho {RHO(s_primes)[0]}")
+        print(f"Psi {PSI(s_primes)[0]}")
+        if one_c_graphs:
+            plt.plot(s_primes,deltas)
+            plt.title("Delta")
+            if DELTA_plot:
+                plt.show()
+            
+            plt.plot(s_primes[1::],GAMMA(deltas))
+            plt.title("Gamma")
+            if GAMMA_plot: 
+                plt.show()
+            
+            plt.plot(s_primes,VEGA(s_primes))
+            plt.title("Vega")
+            if VEGA_plot:
+                plt.show()
+            
+            plt.plot(s_primes,THETA(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+            plt.title("Theta")
+            if THETA_plot:
+                plt.show()
+            
+            plt.plot(s_primes,RHO(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+            plt.title("Rho")
+            if RHO_plot:
+                plt.show()
+            
+            plt.plot(s_primes,PSI(s_primes))
+            plt.title("Psi")
+            if PSI_plot:
+                plt.show()
 
 

@@ -108,7 +108,7 @@ def meta_simulator(simulation_round_limit,simulation_step_size,simulation_amount
     while at_simulation <= simulation_round_limit:
         variance_i = []
         for i in range(simulation_amount):
-            variance_i.append(european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,at_simulation))
+            variance_i.append(european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,at_simulation,knock_in))
                
         variance.append(np.var(variance_i))
 
@@ -311,8 +311,8 @@ if __name__ == "__main__":
     #––––Run toggles––––
     three_a = 0
     three_b = 0 
-    three_b_var = 0 
-    three_c = 1
+    three_b_var = 1
+    three_c = 0
     three_c_mc = 0
     #––––––––––––––––
 
@@ -350,16 +350,19 @@ if __name__ == "__main__":
         print(f"European knock-out Monte Carlo mean:  {np.mean(data_out)} variance: {np.var(data_out)}")
 
     if three_b_var:
-        simulation_round_limit = 1000
+        simulation_round_limit = 10_000
         simulation_step_size = 10
         simulation_amount = 10
+        plt.xlabel("Number of simulations")
+        plt.ylabel("Variance")
         numb_simulations, variance = meta_simulator(simulation_round_limit,simulation_step_size,simulation_amount,S,K,T,r,delta,sigma,call_or_put,H,h)
         plt.plot(numb_simulations[1:],variance)
+        
         plt.show()
     
     #3c test
     if three_c:
-        delta = 0.02
+        delta = 0.0
         tree = {}
         knock_in = 1
         print(f"American call knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}")
