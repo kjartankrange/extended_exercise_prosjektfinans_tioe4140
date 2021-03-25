@@ -4,6 +4,9 @@ from numpy import random
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import sys
+sys.setrecursionlimit(10**6)
+
 
 
 #2a
@@ -19,9 +22,9 @@ def save_and_return(S, data,value,t,pos_y):
 full_tree = {}
 
 #fill full tree
-def american_bionomial_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y):
+def american_bionomial_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y, T):
    
-    if t == 5: 
+    if t == T: 
         temp = max(call_or_put*(S-K),0)
         full_tree[ (t,pos_y) ] = temp
         stock_tree[ (t,pos_y) ] = S
@@ -31,7 +34,7 @@ def american_bionomial_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y):
     u = e**((r-delta)*h+sigma*h**(1/2))
     d = e**((r-delta)*h-sigma*h**(1/2)) 
     p = (e**((r-delta)*h)-d)/(u-d)
-    return save_and_return(S, full_tree,max( call_or_put*(S-K), e**((-r)*h)*american_bionomial_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h)*p+e**((-r)*h)*american_bionomial_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h)*(1-p) ),t,pos_y)
+    return save_and_return(S, full_tree,max( call_or_put*(S-K), e**((-r)*h)*american_bionomial_option(u*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y+h,T)*p+e**((-r)*h)*american_bionomial_option(d*S,K,t+h,r,delta,sigma,h,call_or_put,pos_y-h, T)*(1-p) ),t,pos_y)
 
 
 
@@ -102,10 +105,10 @@ def price_options(T,K,h,call_or_put, stock_sims_in):
                     regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
         
         if regression_table_t!=[]:
-            c, c_x = get_regression(regression_table_t)
+            c, c_x, c_x_2 = get_regression(regression_table_t)
 
         for i in range(len(stock_sims)):
-            continuation_value = c+c_x*stock_sims[i][t-1]
+            continuation_value = c+c_x*stock_sims[i][t-1]+c_x_2*stock_sims[i][t-1]**2
             exercise_value = max(call_or_put*(stock_sims[i][t-1] - K),0)
 
             if exercise_value > continuation_value:
@@ -135,32 +138,53 @@ def price_options(T,K,h,call_or_put, stock_sims_in):
 def get_regression(regression_table):
     x = []
     y = []
+    z = []
     for tup in regression_table: 
-        x.append(tup[1])
+        x.append([tup[1], tup[1]**2])
+        z.append(tup[1])
         y.append(tup[0])
     
     #plt.figure(1)
-    #plt.scatter(x, y)
+    #plt.scatter(z, y)
     
-    x = np.array(x).reshape((-1,1)) 
+    x = np.array(x) #.reshape((-1,1)) 
     y = np.array(y)
+    z = np.array(z).reshape((-1,1))
 
     model = LinearRegression().fit(x,y)
+    """
+    fx = []
+    for i in range(len(z)):
+        fx.append(model.intercept_+ z[i]*model.coef_[0]+model.coef_[1]*z[i]**2)
 
-    #plt.plot(x, model.intercept_+ x*model.coef_[0], "r")
-    #plt.show()
-    return model.intercept_, model.coef_[0]
+    plt.plot(z,fx, "r")
+    plt.show()
+    """
+    return model.intercept_, model.coef_[0], model.coef_[1]
     
 #2c
+
+def starting_point(r, delta, sigma, K, call_or_put):
+    h_1 = 1/2 - (r-delta)/sigma**2 + (((r-delta)/sigma**2-1/2)**2 + 2*r / sigma**2)**(1/2)
+    h_2 = 1/2 - (r-delta)/sigma**2 - (((r-delta)/sigma**2-1/2)**2 + 2*r / sigma**2)**(1/2)
+    if call_or_put == 1:
+        H_c = K *(h_1/(h_1-1))
+        return H_c
+    else:
+        H_p = K *(h_2/(h_2-1))
+        return H_p
+
 
 def exercise_boundary(full_tree, call_or_put,h):
     stock_price = []
     time = []
     y_pos = 0
-    max_y = 0
-    boundary = call_or_put* 1000
+    max_y = T*(int(1/h))
+    start = starting_point(r, delta, sigma, K, call_or_put)
+    z = american_bionomial_option(start,K, -T,r,delta,sigma,h,call_or_put,0, T)
+    boundary = call_or_put * 1000
     for x_pos in range(T*(int(1/h))+1):
-        y_pos = -max_y
+        y_pos =  - max_y
         max_y+=1
         while y_pos<=max_y:
             S = stock_tree[(x_pos*h,y_pos*h)]
@@ -262,9 +286,9 @@ def plot_hist_MC(table):
 if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
-    task_2a = 1
+    task_2a = 0
     task_2b = 0
-    task_2c = 0
+    task_2c = 1
     task_2d = 0
     task_2e = 0
     task_2f = 0
@@ -279,15 +303,15 @@ if __name__ == "__main__":
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
     call_or_put = 1 # 1 = call, -1 = put
-    number_of_simulations = 10000               
+    number_of_simulations = 20000               
 
     #2a
 
     if task_2a:
         call_or_put = 1
-        print("American call option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+        print("American call option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0, T))
         call_or_put = -1
-        print("American put option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0))
+        print("American put option (binomial): ",american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0, T))
 
     #2b
     if task_2b:
@@ -301,13 +325,12 @@ if __name__ == "__main__":
     #2c
     #TODO: do we need to use the hint here? Add more st devs?
     if task_2c:
+
         stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
         call_or_put=1
-        z = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
         x,y= exercise_boundary(full_tree, call_or_put,h)
         stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
         call_or_put=-1
-        z = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
         x,y=exercise_boundary(full_tree, call_or_put,h)
 
     #2d - discussion
