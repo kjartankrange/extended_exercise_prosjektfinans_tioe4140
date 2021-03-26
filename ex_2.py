@@ -184,9 +184,9 @@ def exercise_boundary(full_tree, call_or_put,h):
     z = american_bionomial_option(start,K, -T,r,delta,sigma,h,call_or_put,0, T)
     boundary = call_or_put * 1000
     for x_pos in range(T*(int(1/h))+1):
-        y_pos =  - max_y
+        y_pos =  - max_y*call_or_put
         max_y+=1
-        while y_pos<=max_y:
+        while (y_pos<=max_y and call_or_put==1) or (y_pos>=-max_y and call_or_put==-1):
             S = stock_tree[(x_pos*h,y_pos*h)]
             if (call_or_put==1 and S<boundary) or (call_or_put==-1 and S>boundary):
                 if (call_or_put*(S-K)>e**((-r)*h)*full_tree[x_pos*h,y_pos*h]):
@@ -196,11 +196,14 @@ def exercise_boundary(full_tree, call_or_put,h):
                     stock_price.append(S)
                     time.append(x_pos*h)
                     boundary = S
-            y_pos+=2
+                    break
+            y_pos=y_pos+call_or_put*2
+    stock_price.append(100)
+    time.append(5)
     if task_2c:
         plt.figure(1)
         plt.scatter(time, stock_price, marker="|")
-        plt.plot(time, stock_price)
+        plt.plot(time, stock_price, linewidth=5.0)
         plt.xlim(0,T)
         if call_or_put==1:
             plt.ylim(100,500)
@@ -218,8 +221,11 @@ def make_granular_function(excersice_boundaries,h,times):
     
     growth_lst = []
     for i in range(len(excersice_boundaries)-1):
-        growth = (excersice_boundaries[i+1]-excersice_boundaries[i]) / ( (times[i+1]-times[i])/h)
-        growth_lst.append(growth)
+        if times[i+1]!=times[i]:
+            growth = (excersice_boundaries[i+1]-excersice_boundaries[i]) / ( (times[i+1]-times[i])/h)
+            growth_lst.append(growth)
+        else:
+            growth_lst.append(0)
     
     growth_extenscive = []    
 
@@ -298,7 +304,7 @@ if __name__ == "__main__":
     S = 110 #Current stock price
     K = 100 #Option exercise price
     T = 5 #Time to maturity (in years)
-    h = 1/2 #stepsize in years
+    h = 0.5 #stepsize in years
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
@@ -342,7 +348,7 @@ if __name__ == "__main__":
     #2e 
     if task_2e:
         call_or_put = -1
-        price = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0)
+        price = american_bionomial_option(S,K,0,r,delta,sigma,h,call_or_put,0, T)
         time, ex_bounderies = exercise_boundary(full_tree, call_or_put,h)
         ex_times(stock_sims, time, ex_bounderies)
     
