@@ -257,7 +257,7 @@ def plot_hist_MC(table):
     plt.hist(x, bins = T*int(1/h)) #[0.5,1.5,2.5,3.5,4.5,5.5]
     plt.show()
 
-
+#TASK 2
 
 if __name__ == "__main__":
     #What simulations to run 
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     task_2b = 0
     task_2c = 0
     task_2d = 0
-    task_2e = 0
+    task_2e = 1
     task_2f = 0
     #––––––––––––––––
 

@@ -22,7 +22,7 @@ def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
 
 
-def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H):
+def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in):
     
     #handle probability cases    
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
@@ -42,7 +42,10 @@ def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H):
         if price < H: 
             #Multiply by the chance of having passed H on the path, since the new valuation is E(pay|S): P*max(S-K,0) (1-P)*0 
             value = value*probability_of_having_passed(int(T/h),S,sigma,price,H)
-
+        #knocked-out
+        if not knock_in and price>=H:
+            value = 0
+        
         if value > 0:
             probabilty = nCr(len(possibilites),us) * p**us * (1-p)**(len(possibilites)-us)
             prices.append(value*probabilty)
@@ -122,8 +125,6 @@ def save_and_return(data,value,t,pos_y):
     data[ (t,pos_y) ] = value
     return value
  
-
-
 def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,knock_in,dictionary):
     if t == T: 
         temp = max(call_or_put*(S-K),0)
@@ -324,7 +325,7 @@ if __name__ == "__main__":
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
-    call_or_put = -1 # 1 = call, -1 = put
+    call_or_put = 1 # 1 = call, -1 = put
     H = S+50 #barrier which the option has to pass in value
     number_of_simulations = 5_000               
     knock_in = 1 #1 for knock-in 0 for knock-out
@@ -332,8 +333,11 @@ if __name__ == "__main__":
 
     #3a test
     if three_a: 
-        print(f"European knock-in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H)}" )
-       
+        knock_in = 1
+        print(f"European call knock-in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
+        konck_out = 0
+        print(f"European call knock-out:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
+
 
     #3b test
     if three_b:
@@ -365,13 +369,13 @@ if __name__ == "__main__":
         delta = 0.0
         tree = {}
         knock_in = 1
-        print(f"American call knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}")
+        print(f"American call knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}, h = {h}")
         knock_in = 0
-        print(f"American call knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}")
+        print(f"American call knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,1,0,knock_in,tree)}, h = {h}")
         knock_in = 1
-        print(f"American put knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}")
+        print(f"American put knock-in option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}, h = {h}")
         knock_in = 0
-        print(f"American put knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}")
+        print(f"American put knock-out option: {american_bionomial_barrier_option(S,K,0,r,delta,sigma,h,-1,0,knock_in,tree)}, h = {h}")
         if three_c_mc:
             if(call_or_put==1):
                 print("call")

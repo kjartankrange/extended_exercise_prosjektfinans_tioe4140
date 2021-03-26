@@ -58,11 +58,15 @@ def plot_binomial_prices(max_number_of_steps,delta_steps):
 #C GREEKS
 
 
-def DELTA(s_primes,K,delta,sigma,r,T):
+def DELTA(s_primes,K,delta,sigma,r,T,call_or_put):
     deltas = []
     for s in s_primes:
-        DELTA = math.e**(-delta*T)*norm.cdf((math.log(s/K)+(r-delta+(sigma**2)/2)*T) / (sigma*T**(1/2)))
+        if call_or_put == 1:
+            DELTA = math.e**(-delta*T)*norm.cdf((math.log(s/K)+(r-delta+(sigma**2)/2)*T) / (sigma*T**(1/2)))
+        else: 
+            DELTA = black_scholes_model(s+1,K,T,r,delta,sigma,call_or_put)-black_scholes_model(s,K,T,r,delta,sigma,call_or_put)
         deltas.append(DELTA)
+    
     return deltas
 
 
@@ -77,14 +81,14 @@ def GAMMA(deltas):
 
 
 
-def VEGA(s_primes):
+def VEGA(s_primes,call_or_put):
     vegas = []
     for s in s_primes:
         vegas.append( black_scholes_model(s,K,T,r,delta,sigma+0.01,call_or_put) - black_scholes_model(s,K,T,r,delta,sigma,call_or_put))
     return vegas
 
 
-def THETA(s_primes):
+def THETA(s_primes,call_or_put):
     theta = []
     for s in s_primes:
         theta.append( black_scholes_model(s,K,T-1/365,r,delta,sigma,call_or_put) - black_scholes_model(s,K,T,r,delta,sigma,call_or_put))
@@ -93,7 +97,7 @@ def THETA(s_primes):
 
 
 
-def RHO(s_primes):
+def RHO(s_primes,call_or_put):
     rho = []
     for s in s_primes:
         rho.append( black_scholes_model(s,K,T,r + 0.01,delta,sigma,call_or_put) - black_scholes_model(s,K,T,r,delta,sigma,call_or_put))# Hvorfor er det bedre med en høyere risk free rate?
@@ -102,7 +106,7 @@ def RHO(s_primes):
 
 
 
-def PSI(s_prime):
+def PSI(s_prime,call_or_put):
     psi = []
     for s in s_primes:
         psi.append( black_scholes_model(s,K,T,r,delta+0.01,sigma,call_or_put) - black_scholes_model(s,K,T,r,delta,sigma,call_or_put))# Hvorfor er det bedre med en høyere risk free rate?
@@ -120,7 +124,7 @@ if __name__ == "__main__":
     r = 0.05 #Annual interest rate
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
-    call_or_put = 1 # 1 = call, -1 = put
+    call_or_put = -1 # 1 = call, -1 = put
     h = 1
     
     #––––Run toggles––––
@@ -142,6 +146,8 @@ if __name__ == "__main__":
     
     if one_b:
         print(f"\n European Binomial option")
+        delta = 0
+        h = 0.25
         print(european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put))
         x,y = plot_binomial_prices(1000,10)
         plt.axhline(y=black_scholes_model(S,K,T,r,delta,sigma,call_or_put), color='r', linestyle='-')
@@ -151,16 +157,17 @@ if __name__ == "__main__":
         plt.show()
     if one_c: 
         s_primes = [S]
+        s_primes_for_delta = [S,S+1]
         if one_c_graphs:
             s_primes = [x for x in range(1,401)]
         #print("\n GREEKS")
-        deltas = DELTA(s_primes,K,delta,sigma,r,T)
-        print(f"Delta {DELTA(s_primes,K,delta,sigma,r,T)[0]}")
-        print(f"Gamma {GAMMA(DELTA(s_primes,K,delta,sigma,r,T))}")
-        print(f"Vega {VEGA(s_primes)[0]}")
-        print(f"Theta {THETA(s_primes)[0]}")
-        print(f"Rho {RHO(s_primes)[0]}")
-        print(f"Psi {PSI(s_primes)[0]}")
+        deltas = DELTA(s_primes,K,delta,sigma,r,T,call_or_put)
+        print(f"Delta {DELTA(s_primes,K,delta,sigma,r,T,call_or_put)[0]}")
+        print(f"Gamma {GAMMA(DELTA(s_primes_for_delta,K,delta,sigma,r,T,call_or_put))[0]}" )
+        print(f"Vega {VEGA(s_primes,call_or_put)[0]}")
+        print(f"Theta {THETA(s_primes,call_or_put)[0]}")
+        print(f"Rho {RHO(s_primes,call_or_put)[0]}")
+        print(f"Psi {PSI(s_primes,call_or_put)[0]}")
         if one_c_graphs:
             plt.plot(s_primes,deltas)
             plt.title("Delta")
@@ -172,22 +179,22 @@ if __name__ == "__main__":
             if GAMMA_plot: 
                 plt.show()
             
-            plt.plot(s_primes,VEGA(s_primes))
+            plt.plot(s_primes,VEGA(s_primes,call_or_put))
             plt.title("Vega")
             if VEGA_plot:
                 plt.show()
             
-            plt.plot(s_primes,THETA(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+            plt.plot(s_primes,THETA(s_primes,call_or_put)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
             plt.title("Theta")
             if THETA_plot:
                 plt.show()
             
-            plt.plot(s_primes,RHO(s_primes)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
+            plt.plot(s_primes,RHO(s_primes,call_or_put)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
             plt.title("Rho")
             if RHO_plot:
                 plt.show()
             
-            plt.plot(s_primes,PSI(s_primes))
+            plt.plot(s_primes,PSI(s_primes,call_or_put))
             plt.title("Psi")
             if PSI_plot:
                 plt.show()
