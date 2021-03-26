@@ -58,7 +58,7 @@ def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
 
 
 def sims_plotter(sims,T):
-    ts = [i for i in range(T+1)]
+    ts = [i for i in range(T*int(1/h_sim)+1)]
     for sim in sims:
 
         plt.plot(ts,sim)
@@ -98,7 +98,7 @@ def price_options(T,K,h,call_or_put, stock_sims_in):
             
             #if the option is in the money
 
-            if call_or_put*(stock_sims[i][t-1] - K) > 0:
+            if  call_or_put*(stock_sims[i][t-1] - K) > 0:
 
                 if cash_flows[i][t]!=0:
 
@@ -222,7 +222,7 @@ def make_granular_function(excersice_boundaries,h,times):
     growth_lst = []
     for i in range(len(excersice_boundaries)-1):
         if times[i+1]!=times[i]:
-            growth = (excersice_boundaries[i+1]-excersice_boundaries[i]) / ( (times[i+1]-times[i])/h)
+            growth = (excersice_boundaries[i+1]-excersice_boundaries[i]) / ( (times[i+1]-times[i])/h_sim)
             growth_lst.append(growth)
         else:
             growth_lst.append(0)
@@ -236,7 +236,7 @@ def make_granular_function(excersice_boundaries,h,times):
             if t < times[i+1]:
                 growth_extenscive.append(growth_lst[i]) 
                 break
-        t += h
+        t += h_sim
                
     
     value_t = excersice_boundaries[0]
@@ -256,35 +256,48 @@ def ex_times(stock_sims, time, ex_bounderies):
         for i in range(len(sim)): 
             if call_or_put==1:
                 if sim[i] >= gran_ex_list[i]:
-                    ex_times.append(i*h)
+                    ex_times.append(i*h_sim)
                     break
             else:
                 if sim[i] <= gran_ex_list[i]:
-                    ex_times.append(i*h)
+                    ex_times.append(i*h_sim)
                     break
     #percentage before T
     sum_total = 0
     sum_before_T = 0
+    sum_before_T_app = 0
     for time in ex_times:
         if time<T:
             sum_before_T+=1
+        if time<4.5:
+            sum_before_T_app+=1
         sum_total+=1
-    print(f"Percentage of paths excercised before T = {T}: ",sum_before_T/sum_total*100)
+    print(f"Percentage of paths excercised before T  = {T} (Ex. boundary): ",sum_before_T/len(ex_times)*100)
+    print(f"Percentage of paths excercised before T  = 4.5 (Ex. boundary): ",sum_before_T_app/sum_total*100)
 
     plt.figure(3)
-    plt.hist(ex_times, bins = T*int(1/h)) #[0.5,1.5,2.5,3.5,4.5,5.5]
+    plt.hist(ex_times, bins = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5]) #[0,0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25]
     plt.show()
 
 
 #F
 def plot_hist_MC(table):
     x = []
+    #percentage before T
+    sum_total = 0
+    sum_before_T = 0
     for lst in table:
         for t in range(len(lst)):
             if (lst[t]==1):
-                x.append(t*h+h)
+                x.append(t*h_sim+h_sim)
+                if t!=(T-1):
+                    sum_before_T+=1
+
+        sum_total+=1
+    print(f"Percentage of paths excercised before T  = {T} (MC)         : ",sum_before_T/sum_total*100)
+
     plt.figure(2)
-    plt.hist(x, bins = T*int(1/h)) #[0.5,1.5,2.5,3.5,4.5,5.5]
+    plt.hist(x, bins = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5]) #[0.5,1.5,2.5,3.5,4.5,5.5], T*int(1/h)
     plt.show()
 
 #TASK 2
@@ -294,10 +307,10 @@ if __name__ == "__main__":
     #––––Run toggles––––
     task_2a = 0
     task_2b = 0
-    task_2c = 1
+    task_2c = 0
     task_2d = 0
     task_2e = 1
-    task_2f = 0
+    task_2f = 1
     #––––––––––––––––
 
     #Params for simulations
@@ -309,7 +322,7 @@ if __name__ == "__main__":
     delta = 0.02 #Annual (continuous) dividend yield
     sigma = .3 #Annualized volatility of stock
     call_or_put = 1 # 1 = call, -1 = put
-    number_of_simulations = 20000               
+    number_of_simulations = 10000               
 
     #2a
 
@@ -329,7 +342,6 @@ if __name__ == "__main__":
         print("American put option (MC): ",price_options(T,K,h,call_or_put, stock_sims))
 
     #2c
-    #TODO: do we need to use the hint here? Add more st devs?
     if task_2c:
 
         stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
@@ -342,8 +354,10 @@ if __name__ == "__main__":
     #2d - discussion
 
     #2e and 2f need same price paths
+
     if task_2e or task_2f:
-        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+        h_sim=0.5
+        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h_sim,number_of_simulations)
 
     #2e 
     if task_2e:
@@ -355,4 +369,4 @@ if __name__ == "__main__":
     #2f
     if task_2f:
         call_or_put = -1
-        price  = price_options(T,K,h,call_or_put, stock_sims)
+        price  = price_options(T,K,h_sim,call_or_put, stock_sims)
