@@ -32,25 +32,29 @@ def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in):
     possibilites = []
     for us in range(int(T/h),0,-1):
         possibilites.append(us)  #["uuuuu","uuuud","uuudd","uuddd","udddd","ddddd"]
-
-    prices = []
+    values = []
+    #loop to find values in end nodes
     for end_node in possibilites: 
         us = end_node
         price = S*u**(us)*d**(len(possibilites)-us)
-        value = call_or_put*(price - K)
+        value = max(call_or_put*(price - K),0)
         
-        if price < H: 
-            #Multiply by the chance of having passed H on the path, since the new valuation is E(pay|S): P*max(S-K,0) (1-P)*0 
-            value = value*probability_of_having_passed(int(T/h),S,sigma,price,H)
-        #knocked-out
-        if not knock_in and price>=H:
-            value = 0
-        
+        if knock_in: 
+            if price < H: 
+                value = value*probability_of_having_passed(int(T/h),S,sigma,price,H)
+                
+
+        else: #knock_out
+            if price > H: 
+                value = 0             
+            else: 
+                value = value*(1-probability_of_having_passed(int(T/h),S,sigma,price,H))
+    
         if value > 0:
             probabilty = nCr(len(possibilites),us) * p**us * (1-p)**(len(possibilites)-us)
-            prices.append(value*probabilty)
+            values.append(value*probabilty)
 
-    option_price = sum(prices)*math.e**(-(r)*T)
+    option_price = sum(values)*math.e**(-(r)*T)
     return option_price
 
 #Keytakaway: The code works, but we see no difference for option as there is no u and d combination after 5 years which gives a K < price < H and   
@@ -310,9 +314,9 @@ def plot_hist_MC(table):
 if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
-    three_a = 0
+    three_a = 1
     three_b = 0 
-    three_b_var = 1
+    three_b_var = 0
     three_c = 0
     three_c_mc = 0
     #––––––––––––––––
@@ -333,9 +337,10 @@ if __name__ == "__main__":
 
     #3a test
     if three_a: 
+        h = 0.01
         knock_in = 1
         print(f"European call knock-in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
-        konck_out = 0
+        knock_in = 0
         print(f"European call knock-out:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
 
 

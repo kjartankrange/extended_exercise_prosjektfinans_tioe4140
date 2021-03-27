@@ -129,9 +129,9 @@ if __name__ == "__main__":
     
     #––––Run toggles––––
     one_a = 0
-    one_b = 0
-    one_c = 1
-    one_c_graphs = 0 
+    one_b = 1
+    one_c = 0
+    one_c_graphs = 0
     #plots for 1C)
     DELTA_plot = 1
     GAMMA_plot = 1
@@ -146,9 +146,10 @@ if __name__ == "__main__":
     
     if one_b:
         print(f"\n European Binomial option")
-        delta = 0
-        h = 0.25
-        print(european_bionomial_option(S,K,T,r,delta,sigma,h,call_or_put))
+        delta = 0.02
+        h = 0.01
+        print( f"Call option{european_bionomial_option(S,K,T,r,delta,sigma,h,1)}, h = {h}")
+        print( f"Put option {european_bionomial_option(S,K,T,r,delta,sigma,h,-1)}, h =  {h}")
         x,y = plot_binomial_prices(1000,10)
         plt.axhline(y=black_scholes_model(S,K,T,r,delta,sigma,call_or_put), color='r', linestyle='-')
         plt.plot(x,y)
