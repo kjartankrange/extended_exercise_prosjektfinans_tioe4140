@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import sys
+from numpy.polynomial import Polynomial
+
 sys.setrecursionlimit(10**6)
 
 
@@ -102,7 +104,7 @@ def price_options(T,K,h,call_or_put, stock_sims_in):
 
                 if cash_flows[i][t]!=0:
 
-                    regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
+                    regression_table_t.append( (cash_flows[i][t]*e**(-r*h*(t-1)) , stock_sims[i][t-1] ) )
         
         if regression_table_t!=[]:
             c, c_x, c_x_2 = get_regression(regression_table_t)
@@ -127,7 +129,7 @@ def price_options(T,K,h,call_or_put, stock_sims_in):
     for i in range(len(stock_sims)):
         for t in range(0,T*extra):
             if stop_flag[i][t] == 1:
-                summ += cash_flows[i][t]*e**((-r)*(t*h+h))
+                summ += cash_flows[i][t]*e**((-r)*((t)*h))
 
     #for F
     if task_2f:
@@ -152,6 +154,8 @@ def get_regression(regression_table):
     z = np.array(z).reshape((-1,1))
 
     model = LinearRegression().fit(x,y)
+    #c, stats = np.polynomial.polynomial.polyfit(x,y,2,full=True)
+
     """
     fx = []
     for i in range(len(z)):
@@ -161,6 +165,7 @@ def get_regression(regression_table):
     plt.show()
     """
     return model.intercept_, model.coef_[0], model.coef_[1]
+    #return c[0], c[1], c[2]
     
 #2c
 
@@ -178,7 +183,7 @@ def exercise_boundary(full_tree, call_or_put,h):
     stock_price = []
     time = []
     y_pos = 0
-    max_y = T*(int(1/h))
+    max_y =  T*(int(1/h))
     start = starting_point(r, delta, sigma, K, call_or_put)
     z = american_bionomial_option(start,K, -T,r,delta,sigma,h,call_or_put,0, T)
     boundary = call_or_put * 1000
@@ -201,14 +206,17 @@ def exercise_boundary(full_tree, call_or_put,h):
     time.append(5)
     if task_2c:
         plt.figure(1)
-        plt.scatter(time, stock_price, marker="|")
-        plt.plot(time, stock_price, linewidth=5.0)
+        plt.scatter(time, stock_price, marker="|", s = 12*6)
+        plt.plot(time, stock_price, linewidth=3.0, label = f"Sigma = {sigma}")
+        plt.xlabel("Time in Years")
+        plt.ylabel("Exercise Boundary")
         plt.xlim(0,T)
+        plt.legend()
         if call_or_put==1:
             plt.ylim(100,500)
         else:
             plt.ylim(20,100)
-        plt.show()
+        #plt.show()
     return time, stock_price
 
 
@@ -275,6 +283,9 @@ def ex_times(stock_sims, time, ex_bounderies):
     print(f"Percentage of paths excercised before T  = 4.5 (Ex. boundary): ",sum_before_T_app/sum_total*100)
 
     plt.figure(3)
+    plt.title("Using Exercise Boundary")
+    plt.xlabel("Exercise Time in Years")
+    plt.ylabel("Number of Options exercised")
     plt.hist(ex_times, bins = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5]) #[0,0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25]
     plt.show()
 
@@ -296,7 +307,11 @@ def plot_hist_MC(table):
         sum_total+=1
     print(f"Percentage of paths excercised before T  = {T} (MC)         : ",sum_before_T/sum_total*100)
 
+
     plt.figure(2)
+    plt.title("Using the Least Squares Monte Carlo-method")
+    plt.xlabel("Exercise Time in Years")
+    plt.ylabel("Number of Options exercised")
     plt.hist(x, bins = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5]) #[0.5,1.5,2.5,3.5,4.5,5.5], T*int(1/h)
     plt.show()
 
@@ -334,29 +349,63 @@ if __name__ == "__main__":
 
     #2b
     if task_2b:
-        call_or_put = 1
-        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
-        print("American call option (MC): ",price_options(T,K,h,call_or_put, stock_sims))
-        call_or_put = -1
-        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
-        print("American put option (MC): ",price_options(T,K,h,call_or_put, stock_sims))
+        puts = []
+        calls = []
+        for x in range(1):
+            print(x)
+            call_or_put = 1
+            stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+            price = price_options(T,K,h,call_or_put, stock_sims)
+                
+            calls.append(price)
+            print("American call option (MC): ",price)
+            
+            call_or_put = -1
+            stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+            price = price_options(T,K,h,call_or_put, stock_sims)
+            puts.append(price)
+            print("American put option (MC): ",price)
+            
+        print(calls)
+        print(puts)
+        variance_put = np.var(puts)
+        variance_call = np.var(calls)
+        mean_put = np.mean(puts)
+        mean_call = np.mean(calls)
+        print("varput", variance_put)
+        print("varcall", variance_call)
+        print("meancall", mean_call)
+        print("meanput", mean_put)
+
+
+
 
     #2c
     if task_2c:
 
-        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
         call_or_put=1
+        sigma = 0.1
         x,y= exercise_boundary(full_tree, call_or_put,h)
-        stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h,number_of_simulations)
+        sigma = 0.3
+        x,y= exercise_boundary(full_tree, call_or_put,h)
+        sigma = 0.5
+        x,y= exercise_boundary(full_tree, call_or_put,h)
+        plt.show()
         call_or_put=-1
-        x,y=exercise_boundary(full_tree, call_or_put,h)
+        sigma = 0.1
+        x,y= exercise_boundary(full_tree, call_or_put,h)
+        sigma = 0.3
+        x,y= exercise_boundary(full_tree, call_or_put,h)
+        sigma = 0.5
+        x,y= exercise_boundary(full_tree, call_or_put,h)
+        plt.show()
 
     #2d - discussion
 
     #2e and 2f need same price paths
-
+    h_sim=h
     if task_2e or task_2f:
-        h_sim=0.5
+
         stock_sims  = monte_carlo_simulation(S,T,delta,sigma,r,h_sim,number_of_simulations)
 
     #2e 
