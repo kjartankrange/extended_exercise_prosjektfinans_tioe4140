@@ -174,7 +174,6 @@ def starting_point(r, delta, sigma, K, call_or_put):
         H_p = K *(h_2/(h_2-1))
         return H_p
 
-
 def exercise_boundary(full_tree, call_or_put,h):
     stock_price = []
     time = []
@@ -213,6 +212,7 @@ def exercise_boundary(full_tree, call_or_put,h):
     return time, stock_price
 
 
+
 #2e
 
 def make_granular_function(excersice_boundaries,h,times):
@@ -248,7 +248,6 @@ def make_granular_function(excersice_boundaries,h,times):
 
     return granular_exercise_lst
 
-
 def ex_times(stock_sims, time, ex_bounderies):
     gran_ex_list = make_granular_function(ex_bounderies,h, time)
     ex_times = []
@@ -278,6 +277,7 @@ def ex_times(stock_sims, time, ex_bounderies):
     plt.figure(3)
     plt.hist(ex_times, bins = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5]) #[0,0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25]
     plt.show()
+
 
 
 #F

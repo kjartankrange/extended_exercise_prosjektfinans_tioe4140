@@ -14,13 +14,13 @@ from sklearn.linear_model import LinearRegression
 #3A 
 
 def probability_of_having_passed(t,S,sigma, S_t, H):
+    #Implemented as provided in the extended excercise
     if t == 0:
         return 0 
     return math.e**( (-2/(t*sigma**2))*math.log(S/H)*math.log(S_t/H) )
 
 def nCr(n,k):
     return math.factorial(n)/(math.factorial(k)*(math.factorial(n-k)))
-
 
 def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in):
     
@@ -56,6 +56,8 @@ def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in):
     #print(values)
     option_price = sum(values)*math.e**(-(r)*T)
     return option_price
+
+
 
 #3b
 
@@ -116,8 +118,12 @@ def meta_simulator(simulation_round_limit,simulation_step_size,simulation_amount
         x_axis.append(at_simulation)
     return x_axis,variance
 
+
+
 #3c
+
 def save_and_return(data,value,t,pos_y):
+    #save values in the binomial tree
     data[ (t,pos_y) ] = value
     return value
  
@@ -132,8 +138,8 @@ def american_bionomial_barrier_option(S,K,t,r,delta,sigma,h,call_or_put,pos_y,kn
     d = math.e**((r-delta)*h-sigma*h**(1/2)) 
     p = (math.e**((r-delta)*h)-d)/(u-d)
     if t == T-h and K < S and S < H: 
-           p_u = min(probability_of_having_passed(t+h,110,sigma,S*u,H),1) #print(f"Probability of having passed @upwards: {probability_of_having_passed(t+h,110,sigma,S*u,H)}")
-           p_d = min(probability_of_having_passed(t+h,110,sigma,S*d,H),1) #print(f"Probability of having passed @downwards {probability_of_having_passed(t+h,110,sigma,S*d,H)}") #This wrongly prints larger than 1
+           p_u = min(probability_of_having_passed(t+h,110,sigma,S*u,H),1) 
+           p_d = min(probability_of_having_passed(t+h,110,sigma,S*d,H),1) 
            if not knock_in:
                p_u = 1 - p_u
                p_d = 1 - p_d
@@ -157,6 +163,7 @@ def monte_carlo_simulation(S,T,delta,sigma,r,h,rounds):
     return sims
 
 def price_options(T,K,h,call_or_put):
+    #formats of inputs: 
     # stock sims = [[13,13.8,14,15,16],[12,13,15,14,10],...]
     # cash_flows = [[13,13.8,14,15,16],[12,13,15,14,10],...]
     rounds = 100000
@@ -176,7 +183,7 @@ def price_options(T,K,h,call_or_put):
         stock_sims[i] = stock_sims[i][1:]
     
 
-    #print(cash_flows[4])
+    
 
     #knock-in
     knock_in = []
@@ -192,7 +199,7 @@ def price_options(T,K,h,call_or_put):
                 if stock_sims[i][t]>=H:
                     flag = 1
                 knock_in[i][t]=flag
-    else:
+    else: #put
         for i in range(len(stock_sims)):
             knock_in.append([1]*T*extra)
             flag = 1
@@ -214,30 +221,25 @@ def price_options(T,K,h,call_or_put):
 
         for i in range(len(stock_sims)):
             #get the last values
-            #print(len(cash_flows[t+1]))
             
             #if the option is in the money
-
             if call_or_put*(stock_sims[i][t-1] - K) > 0:
 
                 if cash_flows[i][t]!=0:
 
                     regression_table_t.append( (cash_flows[i][t]*e**(-r*h) , stock_sims[i][t-1] ) )
         
-        #print(regression_table_t)
+        #create regression to estimate of continuation value
         if regression_table_t!=[]:
             c, c_x = get_regression(regression_table_t)
-        #print(c)
-        #print(c_x)
+        
         count_ex = 0
         count_co = 0
+
         for i in range(len(stock_sims)):
             continuation_value = c+c_x*stock_sims[i][t-1]
             exercise_value = max(call_or_put*(stock_sims[i][t-1] - K),0)
-            #print(f"{t}")
-            #print(continuation_value)
-            #print(exercise_value)
-            #print("---")
+           
             if exercise_value > continuation_value:
                 if exercise_value!=0 and knock_in[i][t]==1:
                     for x in range(len(stop_flag[i])):
@@ -249,17 +251,14 @@ def price_options(T,K,h,call_or_put):
             else:
                 count_co += 1
                 cash_flows[i][t-1]=0
-        #print(f"count ex: {count_ex}")
-        #print(f"count co: {count_co}")
+        
 
     #return average
     summ = 0
     for i in range(len(stock_sims)):
-        #print(cash_flows[i])
         for t in range(0,T*extra):
             if stop_flag[i][t] == 1:
                 summ += cash_flows[i][t]*e**((-r)*(t*h+h))
-    #print(stop_flag)
     
     #for E
     plot_hist_MC(stop_flag)
@@ -269,10 +268,8 @@ def price_options(T,K,h,call_or_put):
 def get_regression(regression_table):
     x = []
     y = []
-    #print(len(regression_table))
     for tup in regression_table: 
         x.append(tup[1])
-        #print(tup[0])
         y.append(tup[0])
     
     plt.figure(1)
@@ -280,21 +277,15 @@ def get_regression(regression_table):
     
     x = np.array(x).reshape((-1,1)) 
     y = np.array(y)
-    #print(x)
-    #print(y)
 
     model = LinearRegression().fit(x,y)
-    #print(model.coef_)
-    #print(model.intercept_)
-    #print(model.intercept_, model.coef_[0])
     plt.plot(x, model.intercept_+ x*model.coef_[0], "r")
-    #plt.show()
     return model.intercept_, model.coef_[0]
 
 def plot_hist_MC(table):
+    #Used to plot histograms
     x = []
     for lst in table:
-        #print(lst)
         for t in range(len(lst)):
             if (lst[t]==1):
                 x.append(t*h+h)
@@ -348,9 +339,9 @@ if __name__ == "__main__":
                 steps.append(int(T/h))
             print(knock_in_data)
             plt.axhline(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,1),color="red",ls="--",label=f"={round(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,1),3)}  (knock-in after 1000 steps)")
-            plt.plot(steps[:-5],knock_in_data[:-5])
-            plt.axhline(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),color="green",ls="--",label=f"=  {round(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),3)}  (knock-in after 1000 steps)")
-            plt.plot(steps[:-5],knock_out_data[:-5])
+            plt.plot(steps[:-5],knock_in_data[:-5],label="knock-in")
+            plt.axhline(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),color="green",ls="--",label=f"=  {round(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),3)}  (knock-out after 1000 steps)")
+            plt.plot(steps[:-5],knock_out_data[:-5],label="knock-out")
             plt.xlabel("Number of steps")
             plt.ylabel("Price USD")
             plt.legend()

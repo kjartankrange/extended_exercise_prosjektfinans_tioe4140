@@ -127,7 +127,7 @@ if __name__ == "__main__":
     call_or_put = -1 # 1 = call, -1 = put
     h = 1
     
-    #––––Run toggles––––
+    #––––Run toggles–––– SET what tasks you want to print to 1
     one_a = 0
     one_b = 1
     one_c = 0
