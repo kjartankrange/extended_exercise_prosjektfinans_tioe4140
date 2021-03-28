@@ -131,7 +131,7 @@ if __name__ == "__main__":
     one_a = 0
     one_b = 1
     one_c = 0
-    one_c_graphs = 0
+    one_c_graphs = 1
     #plots for 1C)
     DELTA_plot = 1
     GAMMA_plot = 1
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     if one_b:
         print(f"\n European Binomial option")
         delta = 0.02
-        h = 0.01
+        h = 0.005
         print( f"Call option{european_bionomial_option(S,K,T,r,delta,sigma,h,1)}, h = {h}")
         print( f"Put option {european_bionomial_option(S,K,T,r,delta,sigma,h,-1)}, h =  {h}")
         x,y = plot_binomial_prices(1000,10)
@@ -173,31 +173,43 @@ if __name__ == "__main__":
             plt.plot(s_primes,deltas)
             plt.title("Delta")
             if DELTA_plot:
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
             
             plt.plot(s_primes[1::],GAMMA(deltas))
             plt.title("Gamma")
             if GAMMA_plot: 
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
             
             plt.plot(s_primes,VEGA(s_primes,call_or_put))
             plt.title("Vega")
             if VEGA_plot:
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
             
             plt.plot(s_primes,THETA(s_primes,call_or_put)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
             plt.title("Theta")
             if THETA_plot:
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
             
             plt.plot(s_primes,RHO(s_primes,call_or_put)) #Kommentar når prisen er hly er det kjipt at den varer lengre fordi vi vil cashe ut
             plt.title("Rho")
             if RHO_plot:
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
             
             plt.plot(s_primes,PSI(s_primes,call_or_put))
             plt.title("Psi")
             if PSI_plot:
+                plt.xlabel("Price USD")
+                plt.ylabel("Change in option price")
                 plt.show()
 
 

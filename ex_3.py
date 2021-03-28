@@ -39,28 +39,23 @@ def european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in):
         price = S*u**(us)*d**(len(possibilites)-us)
         value = max(call_or_put*(price - K),0)
         
-        if knock_in: 
+        if knock_in:
             if price < H: 
-                value = value*probability_of_having_passed(int(T/h),S,sigma,price,H)
+                value = value*probability_of_having_passed(T,S,sigma,price,H)
                 
 
         else: #knock_out
             if price > H: 
                 value = 0             
             else: 
-                value = value*(1-probability_of_having_passed(int(T/h),S,sigma,price,H))
+                value = value*(1-probability_of_having_passed(T,S,sigma,price,H))
     
         if value > 0:
             probabilty = nCr(len(possibilites),us) * p**us * (1-p)**(len(possibilites)-us)
             values.append(value*probabilty)
-
+    #print(values)
     option_price = sum(values)*math.e**(-(r)*T)
     return option_price
-
-#Keytakaway: The code works, but we see no difference for option as there is no u and d combination after 5 years which gives a K < price < H and   
-
-#print(f"European_knock_in_option: {european_knock_in_option(S,K,T,r,delta,sigma,call_or_put,H)}")
-
 
 #3b
 
@@ -105,8 +100,6 @@ def european_monte_carlo(S,K,T,r,delta,sigma,call_or_put,H,h,number_of_simulatio
     
     return cash_flow/number_of_simulations
 
-
-
 def meta_simulator(simulation_round_limit,simulation_step_size,simulation_amount,S,K,T,r,delta,sigma,call_or_put,H,h):
     at_simulation = simulation_step_size
     variance = []
@@ -122,7 +115,6 @@ def meta_simulator(simulation_round_limit,simulation_step_size,simulation_amount
         at_simulation += simulation_step_size
         x_axis.append(at_simulation)
     return x_axis,variance
-
 
 #3c
 def save_and_return(data,value,t,pos_y):
@@ -315,6 +307,7 @@ if __name__ == "__main__":
     #What simulations to run 
     #––––Run toggles––––
     three_a = 1
+    three_a_graphs = 1
     three_b = 0 
     three_b_var = 0
     three_c = 0
@@ -337,11 +330,32 @@ if __name__ == "__main__":
 
     #3a test
     if three_a: 
-        h = 0.01
+        h = 0.005
         knock_in = 1
         print(f"European call knock-in:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
         knock_in = 0
         print(f"European call knock-out:  {european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,knock_in)}, H = {H}, step size = {h}" )
+        if three_a_graphs: 
+            knock_in_data = []
+            knock_out_data = []
+            steps = []
+            
+            hs = [5,2.5,1,0.5,0.33333,0.25,0.1,0.05,0.03333,0.025,0.01,0.005]
+       
+            for h in hs: 
+                knock_in_data.append( european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,1))
+                knock_out_data.append( european_knock_in_option(S,K,T,r,delta,sigma,h,call_or_put,H,0))
+                steps.append(int(T/h))
+            print(knock_in_data)
+            plt.axhline(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,1),color="red",ls="--",label=f"={round(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,1),3)}  (knock-in after 1000 steps)")
+            plt.plot(steps[:-5],knock_in_data[:-5])
+            plt.axhline(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),color="green",ls="--",label=f"=  {round(european_knock_in_option(S,K,T,r,delta,sigma,0.005,call_or_put,H,0),3)}  (knock-in after 1000 steps)")
+            plt.plot(steps[:-5],knock_out_data[:-5])
+            plt.xlabel("Number of steps")
+            plt.ylabel("Price USD")
+            plt.legend()
+            plt.show()
+
 
 
     #3b test
